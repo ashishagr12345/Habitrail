@@ -1,9 +1,13 @@
-import React from 'react'
+import Home from './Home';
+import Progress from './Progress';
 
 const App = () => {
   return (
-    <div className='bg-red-800 flex text-white justify-center'>app habitrail  </div>
-  )
+    <>
+      <Home />
+      <Progress />
+    </>
+  );
 }
 
-export default App
+export default App;

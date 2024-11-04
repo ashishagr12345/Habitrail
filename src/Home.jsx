@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { FaCalendarAlt, FaChartLine, FaCog, FaPlus, FaTimes, FaTrophy, FaUserCircle, FaBell, FaSearch, FaClipboardList, FaRegClock, FaRegStar, FaRegLightbulb, FaSignOutAlt, FaUserCog } from 'react-icons/fa'
+import { FaHome, FaCalendarAlt, FaChartLine, FaCog, FaPlus, FaTimes, FaTrophy, FaUserCircle, FaBell, FaSearch, FaClipboardList, FaRegClock, FaRegStar, FaRegLightbulb, FaSignOutAlt, FaUserCog, FaEllipsisV } from 'react-icons/fa'
 import { toast, ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { Link } from 'react-router-dom'
+import { format } from 'date-fns'
 
 const Home = () => {
   const [habits, setHabits] = useState(() => {
@@ -27,10 +29,33 @@ const Home = () => {
   ])
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
+  const [showAddHabitModal, setShowAddHabitModal] = useState(false)
+  const [newHabitGoal, setNewHabitGoal] = useState('')
+  const [newHabitPeriod, setNewHabitPeriod] = useState('1 Month (30 Days)')
+  const [newHabitType, setNewHabitType] = useState('Everyday')
+  const [userName, setUserName] = useState('')
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false)
 
   useEffect(() => {
     localStorage.setItem('habits', JSON.stringify(habits))
   }, [habits])
+
+  useEffect(() => {
+    // Retrieve the user's name from local storage
+    const storedName = localStorage.getItem('userName')
+    if (storedName) {
+      setUserName(storedName)
+    } else {
+      // If no name is stored, prompt the user
+      const name = prompt('Please enter your name:')
+      if (name) {
+        localStorage.setItem('userName', name)
+        setUserName(name)
+      }
+    }
+  }, [])
+
+  const currentDate = format(new Date(), 'EEE, d MMMM yyyy')
 
   const completedHabits = habits.filter(habit => habit.completed).length
   const totalHabits = habits.length
@@ -49,11 +74,24 @@ const Home = () => {
 
   const addHabit = (e) => {
     e.preventDefault()
-    if (newHabit.trim()) {
+    if (newHabit.trim() && newHabitGoal.trim()) {
       const newId = Math.max(...habits.map(h => h.id), 0) + 1
-      setHabits([...habits, { id: newId, name: newHabit, completed: false, streak: 0, category: 'Uncategorized' }])
+      setHabits([...habits, {
+        id: newId,
+        name: newHabit,
+        goal: newHabitGoal,
+        period: newHabitPeriod,
+        type: newHabitType,
+        completed: false,
+        streak: 0,
+        category: 'Uncategorized'
+      }])
       setNewHabit('')
-      toast.info(`New habit "${newHabit}" added!`)
+      setNewHabitGoal('')
+      setNewHabitPeriod('1 Month (30 Days)')
+      setNewHabitType('Everyday')
+      setShowAddHabitModal(false)
+      setShowConfirmationModal(true)
     }
   }
 
@@ -89,69 +127,77 @@ const Home = () => {
   ]
 
   return (
-    <div className="bg-gray-100 min-h-screen">
+    <div className="bg-gray-100 min-h-screen relative">
       <ToastContainer position="bottom-right" />
       <nav className="bg-white shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
-            <div className="flex">
-              <div className="flex-shrink-0 flex items-center">
-                <h1 className="text-2xl font-bold text-orange-500">HabitPro</h1>
-              </div>
+            <div className="flex-shrink-0 flex items-center">
+              <h1 className="text-2xl font-bold text-orange-500">HabitRail</h1>
             </div>
             <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <button className="bg-orange-500 p-1 rounded-full text-white hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-orange-800 focus:ring-white">
-                  <FaPlus size={20} />
-                </button>
+              <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
+                <Link to={"/"} className="border-orange-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                  <FaHome className="mr-1" /> Home
+                </Link>
+                <Link to={"/progress"} className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                  <FaChartLine className="mr-1" /> Progress
+                </Link>
+                <Link to={"/settings"} className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                  <FaCog className="mr-1" /> Settings
+                </Link>
               </div>
-              <div className="ml-4 relative">
-                <button 
-                  onClick={() => setShowNotifications(!showNotifications)}
-                  className="bg-white p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
-                >
-                  <FaBell size={20} />
-                  {notifications.some(n => !n.read) && (
-                    <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-400 ring-2 ring-white"></span>
-                  )}
-                </button>
-                {showNotifications && (
-                  <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none">
-                    {notifications.map(notification => (
-                      <a
-                        key={notification.id}
-                        href="#"
-                        className={`block px-4 py-2 text-sm text-gray-700 ${notification.read ? '' : 'font-bold'}`}
+              <div className="ml-4 flex items-center">
+                {/* Notifications button */}
+                <div className="ml-4 relative">
+                  <button 
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    className="bg-white p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
+                  >
+                    <FaBell size={20} />
+                    {notifications.some(n => !n.read) && (
+                      <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-400 ring-2 ring-white"></span>
+                    )}
+                  </button>
+                  {showNotifications && (
+                    <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none">
+                      {notifications.map(notification => (
+                        <a
+                          key={notification.id}
+                          href="#"
+                          className={`block px-4 py-2 text-sm text-gray-700 ${notification.read ? '' : 'font-bold'}`}
+                        >
+                          {notification.message}
+                        </a>
+                      ))}
+                      <button
+                        onClick={markAllNotificationsAsRead}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       >
-                        {notification.message}
+                        Mark all as read
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {/* User menu */}
+                <div className="ml-4 relative">
+                  <button 
+                    onClick={() => setShowUserMenu(!showUserMenu)}
+                    className="bg-gray-800 flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
+                  >
+                    <FaUserCircle size={32} className="text-white" />
+                  </button>
+                  {showUserMenu && (
+                    <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none">
+                      <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                        <FaUserCog className="inline mr-2" /> Profile Settings
                       </a>
-                    ))}
-                    <button
-                      onClick={markAllNotificationsAsRead}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      Mark all as read
-                    </button>
-                  </div>
-                )}
-              </div>
-              <div className="ml-4 relative">
-                <button 
-                  onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="bg-gray-800 flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
-                >
-                  <FaUserCircle size={32} className="text-white" />
-                </button>
-                {showUserMenu && (
-                  <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none">
-                    <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                      <FaUserCog className="inline mr-2" /> Profile Settings
-                    </a>
-                    <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                      <FaSignOutAlt className="inline mr-2" /> Sign out
-                    </a>
-                  </div>
-                )}
+                      <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                        <FaSignOutAlt className="inline mr-2" /> Sign out
+                      </a>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -162,69 +208,73 @@ const Home = () => {
         <div className="px-4 py-6 sm:px-0">
           <div className="flex flex-wrap -mx-4">
             <div className="w-full lg:w-2/3 px-4">
+              {/* Today's Habits section */}
               <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-2xl font-semibold">Today's Habits</h2>
-                  <div className="flex items-center">
-                    <div className="relative mr-4">
-                      <input
-                        type="text"
-                        placeholder="Search habits..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-8 pr-4 py-2 border rounded-full"
-                      />
-                      <FaSearch className="absolute left-3 top-3 text-gray-400" />
-                    </div>
-                    <form onSubmit={addHabit} className="flex">
-                      <input
-                        type="text"
-                        value={newHabit}
-                        onChange={(e) => setNewHabit(e.target.value)}
-                        placeholder="Add new habit"
-                        className="border rounded-l px-2 py-1"
-                      />
-                      <button type="submit" className="bg-green-500 text-white px-3 py-1 rounded-r hover:bg-green-600 transition-colors duration-200">
-                        <FaPlus />
-                      </button>
-                    </form>
-                  </div>
+                  <Link to="/all-habits" className="text-orange-500 hover:text-orange-600">See all</Link>
                 </div>
-                <ul className="space-y-4">
+                <ul className="space-y-2">
                   <AnimatePresence>
                     {filteredHabits.map((habit) => (
                       <motion.li 
                         key={habit.id} 
-                        className="flex items-center justify-between py-3 border-b last:border-b-0"
+                        className="flex items-center justify-between py-3 px-4 bg-gray-50 rounded-lg"
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 20 }}
                         transition={{ duration: 0.3 }}
                       >
-                        <div>
-                          <span className={`text-lg ${habit.completed ? 'text-green-500' : ''} transition-colors duration-200`}>{habit.name}</span>
-                          <span className="ml-2 text-sm text-gray-500">Streak: {habit.streak} days</span>
-                          <span className="ml-2 text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full">{habit.category}</span>
-                        </div>
                         <div className="flex items-center">
                           <input
                             type="checkbox"
                             checked={habit.completed}
                             onChange={() => toggleHabit(habit.id)}
-                            className="w-6 h-6 text-green-500 border-gray-300 rounded focus:ring-green-500 cursor-pointer"
+                            className="w-5 h-5 text-green-500 border-gray-300 rounded-full focus:ring-green-500 cursor-pointer mr-3"
                           />
-                          <button 
-                            onClick={() => deleteHabit(habit.id)}
-                            className="ml-4 text-red-400 hover:text-red-600 transition-colors duration-200"
-                          >
-                            <FaTimes size={20} />
-                          </button>
+                          <span className={`text-lg ${habit.completed ? 'text-green-500' : 'text-gray-700'} transition-colors duration-200`}>
+                            {habit.name}
+                          </span>
                         </div>
+                        <button 
+                          className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                        >
+                          <FaEllipsisV size={16} />
+                        </button>
                       </motion.li>
                     ))}
                   </AnimatePresence>
                 </ul>
               </div>
+
+              {/* Your Goals section */}
+              <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-2xl font-semibold">Your Goals</h2>
+                  <Link to="/all-goals" className="text-orange-500 hover:text-orange-600">See all</Link>
+                </div>
+                <ul className="space-y-4">
+                  {habits.slice(0, 2).map((habit) => (
+                    <li key={habit.id} className="pb-4 last:pb-0">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-lg font-medium">{habit.name}</span>
+                        <button className="text-gray-400 hover:text-gray-600">
+                          <FaEllipsisV size={16} />
+                        </button>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+                        <div className="bg-orange-500 h-2.5 rounded-full" style={{ width: `${(habit.streak / 7) * 100}%` }}></div>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-600">{habit.streak} from 7 days target</span>
+                        <span className="text-orange-500">{habit.type}</span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Weekly Progress section */}
               <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
                 <h2 className="text-2xl font-semibold mb-4">Weekly Progress</h2>
                 <ResponsiveContainer width="100%" height={300}>
@@ -361,6 +411,102 @@ const Home = () => {
           </div>
         </motion.div>
       )}
+
+      {/* Add Floating Action Button */}
+      <button
+        onClick={() => setShowAddHabitModal(true)}
+        className="fixed right-8 bottom-8 bg-green-500 text-white rounded-full p-4 shadow-lg hover:bg-green-600 transition-colors duration-200"
+      >
+        <FaPlus size={24} />
+      </button>
+
+      {/* Add Habit Modal */}
+      {showAddHabitModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 w-96">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-semibold">Create New Habit Goal</h2>
+              <button onClick={() => setShowAddHabitModal(false)} className="text-gray-500 hover:text-gray-700">
+                <FaTimes />
+              </button>
+            </div>
+            <form onSubmit={addHabit}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Your Goal</label>
+                <input
+                  type="text"
+                  value={newHabitGoal}
+                  onChange={(e) => setNewHabitGoal(e.target.value)}
+                  placeholder="Enter your goal"
+                  className="w-full border rounded px-3 py-2"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Habit Name</label>
+                <input
+                  type="text"
+                  value={newHabit}
+                  onChange={(e) => setNewHabit(e.target.value)}
+                  placeholder="Enter habit name"
+                  className="w-full border rounded px-3 py-2"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Period</label>
+                <select
+                  value={newHabitPeriod}
+                  onChange={(e) => setNewHabitPeriod(e.target.value)}
+                  className="w-full border rounded px-3 py-2"
+                >
+                  <option>1 Month (30 Days)</option>
+                  <option>2 Months (60 Days)</option>
+                  <option>3 Months (90 Days)</option>
+                </select>
+              </div>
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Habit Type</label>
+                <select
+                  value={newHabitType}
+                  onChange={(e) => setNewHabitType(e.target.value)}
+                  className="w-full border rounded px-3 py-2"
+                >
+                  <option>Everyday</option>
+                  <option>Weekdays</option>
+                  <option>Weekends</option>
+                </select>
+              </div>
+              <button
+                type="submit"
+                className="w-full px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
+              >
+                Create New
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showConfirmationModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 w-80 text-center">
+            <div className="mb-4">
+              <svg className="mx-auto w-16 h-16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 3H15L17 5H21C21.5523 5 22 5.44772 22 6V18C22 18.5523 21.5523 19 21 19H3C2.44772 19 2 18.5523 2 18V6C2 5.44772 2.44772 5 3 5H7L9 3Z" stroke="#FF9500" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M9 13L11 15L15 11" stroke="#4CAF50" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold mb-2">Done!</h2>
+            <p className="text-gray-600 mb-6">New Habit Goal has been added! Let's do the best to achieve your goal!</p>
+            <button
+              onClick={() => setShowConfirmationModal(false)}
+              className="w-full px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
